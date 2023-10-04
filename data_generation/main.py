@@ -22,9 +22,9 @@ def write_to_csv(filename, points):
 
 if __name__ == '__main__':
     data_points = generate_data_points(5000)
-    write_to_csv('data_generation/datasets/data_points.csv', data_points)
+    write_to_csv('datasets/data_points.csv', data_points)
 
     # generate K seed points
     K = int(input("Enter the value of K: "))
     seed_points = generate_data_points(K)
-    write_to_csv(f"data_generation/datasets/{K}seed_points.csv", seed_points)
+    write_to_csv(f"datasets/{K}seed_points.csv", seed_points)

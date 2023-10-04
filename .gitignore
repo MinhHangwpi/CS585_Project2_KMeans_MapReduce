@@ -1,1 +1,3 @@
 data_generation/datasets/*.csv
+MapReduceTasks/output
+MapReduceTasks/input
