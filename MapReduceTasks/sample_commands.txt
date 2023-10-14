@@ -1,0 +1,3 @@
+
+--------- Task 2c ---------
+hadoop/bin/hadoop jar  /home/ds503/shared_folder/project-2-1.0-SNAPSHOT.jar Task2c /user/ds503/input_project_2/data_points.csv /user/ds503/input_project_2/10seed_points.csv /user/ds503/output_project_2/task_2c
