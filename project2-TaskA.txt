@@ -1,0 +1,212 @@
+Task A:
+/* Load FaceInPage */
+FaceInPage = LOAD 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Input/FaceInPage.csv' USING PigStorage(',') AS (ID: int, Name: chararray, Nationality: chararray, CountryCode: int, Hobby: chararray);
+/* Filter nationality according to your choice */
+filteredUsers = FILTER FaceInPage BY Nationality == 'United States of America';
+/* Reporting only necessary columns */
+report = FOREACH filteredUsers GENERATE Name, Hobby;
+/* Cleaning output directory if it already exists */
+fs -rm -f -r -R C:/CourseWork/BigDataManagement/Projects/Assignment2/Output/TaskA;
+/* Storing output to directory */
+STORE report INTO 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Output/TaskA' USING PigStorage(',');
+
+
+
+
+
+Task B:
+/* Load FaceInPage */
+FaceInPage = LOAD 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Input/FaceInPage.csv' USING PigStorage(',') AS (ID: int, Name: chararray, Nationality: chararray, CountryCode: int, Hobby: chararray);
+/* Load AccessLogs */
+accessLogs = LOAD 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Input/AccessLogs.csv' USING PigStorage(',') AS (Acc_ID: int, ByWho: int, WhatPage: int, TypeOfAccess: chararray, AccessTime: chararray);
+/* Grouping and Calculating the count of accesses for each page */
+accessCounts = foreach (GROUP accessLogs BY WhatPage) {
+    pageID = group;
+    accessCount = COUNT(accessLogs);
+    GENERATE pageID AS ID, accessCount AS count;
+}
+/* Joining with FaceInPage */
+joinedData = JOIN FaceInPage BY ID, accessCounts BY ID;
+/* Ordering in descending order */
+sortedData = ORDER joinedData BY accessCounts::count DESC;
+/* Keeping only the top 10 rows */
+top10Pages = LIMIT sortedData 10;
+/* Reporting only necessary columns */
+report = FOREACH top10Pages GENERATE FaceInPage::ID AS ID, FaceInPage::Name AS Name, FaceInPage::Nationality AS Nationality;
+/* Cleaning output directory if it already exists */
+fs -rm -f -r -R C:/CourseWork/BigDataManagement/Projects/Assignment2/Output/TaskB;
+/* Storing output to directory */
+STORE report INTO 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Output/TaskB' USING PigStorage(',');
+
+
+
+
+
+Task C:
+/* Load FaceInPage */
+FaceInPage = LOAD 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Input/FaceInPage.csv' USING PigStorage(',') AS (ID: int, Name: chararray, Nationality: chararray, CountryCode: int, Hobby: chararray);
+/* Group by Nationality and Calculating count of pages for each ID */
+report = FOREACH (GROUP FaceInPage BY Nationality) {
+    Nationality = group;
+    citizenCount = COUNT(FaceInPage);
+    GENERATE Nationality as Nationality:chararray, citizenCount as citizenCount:int;
+}
+/* Cleaning output directory if it already exists */
+fs -rm -f -r -R C:/CourseWork/BigDataManagement/Projects/Assignment2/Output/TaskC;
+/* Storing output to directory */
+STORE report INTO 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Output/TaskC' USING PigStorage(',');
+
+
+
+
+
+Task D:
+/* Load FaceInPage */
+FaceInPage = LOAD 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Input/FaceInPage.csv' USING PigStorage(',') AS (ID: int, Name: chararray, Nationality: chararray, CountryCodeCode: chararray, Hobby: chararray);
+/* Load Associates */
+associates = LOAD 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Input/Associates.csv' USING PigStorage(',') AS (Rel_ID: int, PersonA_ID: int, PersonB_ID: int, DateOfRelation: chararray, Description: chararray);
+/* Generating IDs stored in both Column 2 and Column 3 for bi-directionality */
+combinedIDsOne = FOREACH associates GENERATE PersonA_ID AS ID;
+combinedIDsTwo =FOREACH associates GENERATE PersonB_ID AS ID;
+/* Combining them using union */
+combinedIDs = UNION combinedIDsOne,combinedIDsTwo;
+/* Grouping by ID and Calculating number of relationships for each */
+ownerRelationshipCounts = FOREACH (GROUP combinedIDs BY ID) {
+    ID = group;
+    relationshipCount = COUNT(combinedIDs);
+    GENERATE ID as ID:int, relationshipCount as relationshipCount:int;
+}
+/* Joining with FaceInPage to get Names */
+result = JOIN FaceInPage BY ID LEFT OUTER, ownerRelationshipCounts BY ID;
+/* Reporting only necessary columns */
+report = FOREACH result GENERATE FaceInPage::Name AS OwnerName, (ownerRelationshipCounts::relationshipCount is not null ? ownerRelationshipCounts::relationshipCount : 0) AS HappinessFactor;
+/* Cleaning output directory if it already exists */
+fs -rm -f -r -R C:/CourseWork/BigDataManagement/Projects/Assignment2/Output/TaskD;
+/* Storing output to directory */
+STORE report INTO 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Output/TaskD' USING PigStorage(',');
+
+
+
+
+
+Task E:
+/* Load FaceInPage */
+FaceInPage = LOAD 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Input/FaceInPage.csv' USING PigStorage(',') AS (ID: int, Name: chararray, Nationality: chararray, CountryCode: int, Hobby: chararray);
+/* Load AccessLogs */
+accessLogs = LOAD 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Input/AccessLogs.csv' USING PigStorage(',') AS (Acc_ID: int, ByWho: int, WhatPage: int, TypeOfAccess: chararray, AccessTime: chararray);
+/* Grouping by ID and calculating total Accesses and Distinct Accesses */
+accessCounts = FOREACH (GROUP accessLogs BY ByWho) {
+    ByWho = group;
+    totalAccesses = COUNT(accessLogs);
+    distinctPagesAccessed = DISTINCT accessLogs.WhatPage;
+    totalDistinctPagesAccessed = COUNT(distinctPagesAccessed);
+    GENERATE ByWho AS ID:int, totalAccesses AS TotalAccesses:int, totalDistinctPagesAccessed AS DistinctPagesAccessed:int;
+}
+/* Joining with FaceInPage to get Names */
+result = JOIN FaceInPage BY ID LEFT OUTER, accessCounts BY ID;
+/* Reporting only necessary columns */
+report = FOREACH result GENERATE FaceInPage::Name AS OwnerName, (accessCounts::TotalAccesses is not null ? accessCounts::TotalAccesses : 0) AS TotalAccesses, (accessCounts::DistinctPagesAccessed is not null ? accessCounts::DistinctPagesAccessed : 0) AS DistinctPagesAccessed;
+/* Cleaning output directory if it already exists */
+fs -rm -f -r -R C:/CourseWork/BigDataManagement/Projects/Assignment2/Output/TaskE;
+/* Storing output to directory */
+STORE report INTO 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Output/TaskE' USING PigStorage(',');
+
+
+
+
+
+Task F:
+/* Load FaceInPage */
+FaceInPage = LOAD 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Input/FaceInPage.csv' USING PigStorage(',') AS (ID: int, Name: chararray, Nationality: chararray, CountryCode: int, Hobby: chararray);
+/* Load Associates */
+Associates = LOAD 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Input/Associates.csv' USING PigStorage(',') AS (Rel_ID: int, PersonA_ID: int, PersonB_ID: int, DateOfRelation: chararray, Description: chararray);
+/* Load AccessLogs */
+AccessLogs = LOAD 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Input/AccessLogs.csv' USING PigStorage(',') AS (Acc_ID: int, ByWho: int, WhatPage: int, TypeOfAccess: chararray, AccessTime: chararray);
+/* Keep only necessary columns from FaceInPage */
+FaceInPage = FOREACH FaceInPage GENERATE ID, Name;
+/* Generating IDs from both Column 2 and Column 3 with relation to Column 3 and Column 2 respectively for bi-directionality */
+NormalAssociates = FOREACH Associates GENERATE PersonA_ID AS ID, PersonB_ID AS FriendID;
+ReversedAssociates = FOREACH Associates GENERATE PersonB_ID AS ID, PersonA_ID AS FriendID;
+/* Combining both using Union Operator */
+AllAssociates = UNION NormalAssociates, ReversedAssociates;
+/* Joining combined associate list with AccessLogs */
+AccessedFriends = JOIN AllAssociates BY ID, AccessLogs BY ByWho;
+/* Checking if FaceInPage user has accessed friends page. If yes, then output 1, else 0 */
+checkPage = FOREACH AccessedFriends GENERATE AllAssociates::ID AS ID,AllAssociates::FriendID AS FriendID, (AllAssociates::FriendID == AccessLogs::WhatPage ? 1 : 0) AS is_equal;
+/* Keep only rows where user has accessed friends page */
+checkPage = FILTER checkPage by is_equal == 1;
+checkPage = DISTINCT checkPage;
+/* Again joining with associates list to find which user has not accessed friends page by fltering nulls */
+join_with_base = JOIN AllAssociates BY (ID,FriendID) LEFT OUTER, checkPage BY (ID,FriendID);
+join_with_base_distinct = FILTER join_with_base BY checkPage::ID IS NULL;
+/* Reporting only columns required */
+result = FOREACH join_with_base_distinct GENERATE AllAssociates::ID AS ID, AllAssociates::FriendID AS FriendID;
+/* Joining with FaceInPage twice to get names for user and friend */
+JoinedData = JOIN result BY FriendID, FaceInPage BY ID;
+JoinedDataUpdated = FOREACH JoinedData GENERATE result::ID AS ID, result::FriendID AS FriendID, FaceInPage::Name AS FriendName;
+JoinedDataTwo = Join JoinedDataUpdated BY ID, FaceInPage BY ID;
+/* Reporting only required columns */
+report = FOREACH JoinedDataTwo GENERATE JoinedDataUpdated::ID AS ID, FaceInPage::Name AS Name, JoinedDataUpdated::FriendID AS FriendID, JoinedDataUpdated::FriendName AS FriendName;
+/* Cleaning output directory if it already exists */
+fs -rm -f -r -R C:/CourseWork/BigDataManagement/Projects/Assignment2/Output/TaskF;
+/* Storing into output directory */
+STORE report INTO 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Output/TaskF' USING PigStorage(',');
+
+
+
+
+
+Task G:
+/* Load FaceInPage */
+FaceInPage = LOAD 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Input/FaceInPage.csv' USING PigStorage(',') AS (ID: int, Name: chararray, Nationality: chararray, CountryCode: chararray, Hobby: chararray);
+/* Load AccessLogs */
+accessLogs = LOAD 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Input/AccessLogs.csv' USING PigStorage(',') AS (Acc_ID: int, ByWho: chararray, WhatPage: int, TypeOfAccess: chararray, AccessTime: chararray);
+/* Grouping by WhatPage and generating latest time at a page of FaceInPage user was accessed */
+latest_accessed = FOREACH (GROUP accessLogs BY WhatPage) {
+    WhatPage = group;
+    latest_accessed_date = MAX(accessLogs.AccessTime);
+    GENERATE WhatPage as ID:int, latest_accessed_date as latest_date:int;
+}
+/* Filtering to keep pages older than 90 days (870400 in units) */
+filtered_access = FILTER latest_accessed BY latest_date >= 870400;
+/* Joining with FaceInPage to get names */
+result = JOIN filtered_access by ID, FaceInPage by ID;
+/* Reporting only necessary columns */
+report = FOREACH result GENERATE FaceInPage::ID AS ID, FaceInPage::Name AS Name;
+/* Cleaning output directory if it already exists */
+fs -rm -f -r -R C:/CourseWork/BigDataManagement/Projects/Assignment2/Output/TaskG;
+/* Storing output to directory */
+STORE report INTO 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Output/TaskG' USING PigStorage(',');
+
+
+
+
+
+Task H:
+/* Load FaceInPage */
+FaceInPage = LOAD 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Input/FaceInPage.csv' USING PigStorage(',') AS (ID: int, Name: chararray, Nationality: chararray, CountryCode: int, Hobby: chararray);
+/* Load Associates */
+associates = LOAD 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Input/Associates.csv' USING PigStorage(',') AS (Rel_ID: int, PersonA_ID: int, PersonB_ID: int, DateOfRelation: chararray, Description: chararray);
+/* Generating IDs in both Column 2 and Column 3 for bi-directionality */
+combinedIDsOne = FOREACH associates GENERATE PersonA_ID AS OwnerID;
+combinedIDsTwo =FOREACH associates GENERATE PersonB_ID AS OwnerID;
+/* Combining them using Union Operator */
+combinedIDs = UNION combinedIDsOne,combinedIDsTwo;
+/* Grouping by ID and counting number of relationships each ID has */
+ownerRelationshipCounts = FOREACH (GROUP combinedIDs BY OwnerID) {
+    ownerID = group;
+    relationshipCount = COUNT(combinedIDs);
+    GENERATE ownerID as ownerID:int, relationshipCount as relationshipCount:int;
+}
+/* Generating total relationships, total users and average relationship count */
+relationshipCounts = FOREACH (GROUP ownerRelationshipCounts ALL) GENERATE SUM(ownerRelationshipCounts.relationshipCount) AS totalRelationships:long, COUNT(ownerRelationshipCounts) AS numOwners:long, ((double)SUM(ownerRelationshipCounts.relationshipCount) / (double)COUNT(ownerRelationshipCounts)) AS averageRelationships;
+/* Keeping only user with total relationships greater than the average relationship count */
+popularOwners = FILTER ownerRelationshipCounts BY relationshipCount > (long)relationshipCounts.averageRelationships;
+/* Joining with FaceInPage to get Names */
+result = JOIN popularOwners BY ownerID, FaceInPage BY ID;
+/* Reporting only Necessary Columns */
+report = FOREACH result GENERATE FaceInPage::ID AS ID, FaceInPage::Name AS Name, popularOwners::relationshipCount AS RelationshipCount;
+/* Cleaning output directory if it already exists */
+fs -rm -f -r -R C:/CourseWork/BigDataManagement/Projects/Assignment2/Output/TaskH;
+/* Storing output to directory */
+STORE report INTO 'C:/CourseWork/BigDataManagement/Projects/Assignment2/Output/TaskH' USING PigStorage(',');
