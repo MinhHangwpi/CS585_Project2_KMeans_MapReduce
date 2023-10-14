@@ -8,6 +8,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -20,7 +21,6 @@ public class Task2a {
     public static class Point<X, Y> {
         public final X x;
         public final Y y;
-
         public Point(X x, Y y) {
             this.x = x;
             this.y = y;
@@ -35,7 +35,7 @@ public class Task2a {
 
         @Override
         protected void setup(Context context) throws IOException, InterruptedException {
-            Configuration conf = context.getConfiguration();
+
             URI[] cacheFiles = context.getCacheFiles();
             Path path = new Path(cacheFiles[0]);
 
@@ -83,10 +83,8 @@ public class Task2a {
         }
     }
 
-    public static class KMeansReducer extends Reducer<Text, Text, Text, Text> {
-
+    public static class KMeansReducer extends Reducer<Text, Text, Text, NullWritable> {
         private Text newCentroid = new Text();
-
         @Override
         protected void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
             int sumX = 0;
@@ -104,7 +102,7 @@ public class Task2a {
             int centroidY = sumY / count;
             newCentroid.set(centroidX + "," + centroidY);
 
-            context.write(key, newCentroid);
+            context.write(newCentroid, NullWritable.get());
         }
     }
 
@@ -123,11 +121,9 @@ public class Task2a {
         if (fs.exists(outPath)) {
             fs.delete(outPath, true);
         }
-
         Job job = Job.getInstance(conf, "KMeans Clustering");
 
         job.addCacheFile(new URI(args[1]));
-
         job.setJarByClass(Task2a.class);
 
         FileInputFormat.addInputPath(job, new Path(args[0]));

@@ -1,3 +1,16 @@
+--------- Task 2a ---------
+
+--------- Task 2b ---------
 
 --------- Task 2c ---------
 hadoop/bin/hadoop jar  /home/ds503/shared_folder/project-2-1.0-SNAPSHOT.jar Task2c /user/ds503/input_project_2/data_points.csv /user/ds503/input_project_2/10seed_points.csv /user/ds503/output_project_2/task_2c
+
+--------- Task 2d ---------
+hadoop/bin/hadoop jar  /home/ds503/shared_folder/project-2-1.0-SNAPSHOT.jar Task2d /user/ds503/input_project_2/data_points.csv /user/ds503/input_project_2/10seed_points.csv /user/ds503/output_project_2/task_2d
+
+
+--------- Task 2e ---------
+hadoop/bin/hadoop jar  /home/ds503/shared_folder/project-2-1.0-SNAPSHOT.jar Task2eii /user/ds503/input_project_2/data_points.csv /user/ds503/input_project_2/10seed_points.csv /user/ds503/output_project_2/task_2eii
+
+
+--------- Task 2f ---------

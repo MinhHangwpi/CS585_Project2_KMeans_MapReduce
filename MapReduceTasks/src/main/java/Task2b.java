@@ -98,11 +98,9 @@ public class Task2b {
                 sumY += Integer.parseInt(point[1].trim());
                 count++;
             }
-
             int centroidX = sumX / count;
             int centroidY = sumY / count;
             newCentroid.set(centroidX + "," + centroidY);
-
             context.write(key, newCentroid);
         }
     }
@@ -121,7 +119,7 @@ public class Task2b {
         String seedsPath = args[1];
         String outputPathBase = args[2];
 
-        final int R = 10;  // Number of iterations
+        final int R = 10;
         for (int i = 0; i < R; i++) {
             Job job = Job.getInstance(conf, "KMeans Clustering - Iteration " + (i + 1));
 
@@ -152,8 +150,6 @@ public class Task2b {
                 System.exit(1);
             }
 
-            // Optionally: Check for convergence by comparing the centroids from this iteration to the previous iteration
-            // If the centroids haven't changed significantly, break.
         }
 
         System.out.println("KMeans Clustering completed after " + R + " iterations.");
