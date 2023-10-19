@@ -101,7 +101,6 @@ public class Task2eii {
                 sumY += Integer.parseInt(point[1].trim());
                 count++;
             }
-
             // Write partial sum and count, separated by a comma
             partialSum.set(sumX + "," + sumY + "," + count);
             context.write(key, partialSum);
@@ -109,12 +108,10 @@ public class Task2eii {
     }
 
     public static class KMeansReducer extends Reducer<Text, Text, Text, NullWritable> {
-
         /**
          * The reduce function receives a key-value pair where the key is a centroid and the values are the list of points that are closest to that centroid.
          */
         private Text newCentroid = new Text();
-
         @Override
         protected void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
             int totalSumX = 0;
@@ -204,9 +201,10 @@ public class Task2eii {
         String outputPathBase = args[2]; // e.g. task_c
 
         boolean hasConverged = false;
-        int i = 0;
 
-        while (!hasConverged) {
+        int maxIterations = 50;
+
+        for (int i=0; i < maxIterations; i++) {
             Job job = Job.getInstance(conf, "KMeans Clustering - Iteration " + (i + 1));
 
             // Add the seeds (centroids) file to the cache for this job
@@ -249,7 +247,6 @@ public class Task2eii {
                     break;
                 }
             }
-            i++;
         }
         // Mapping data points to final clusters
         Job clusterMappingJob = Job.getInstance(conf, "Mapping Data to Clusters");

@@ -178,14 +178,15 @@ public class Task2c {
         Configuration conf = new Configuration();
         FileSystem fs = FileSystem.get(conf);
 
-        String inputPath = args[0];
-        String seedsPath = args[1];
+        String inputPath = args[0]; // e.g. data_points.csv
+        String seedsPath = args[1]; // 10seed_poinnts.csv
         String outputPathBase = args[2]; // e.g. task_c
 
         boolean hasConverged = false;
-        int i = 0;
 
-        while (!hasConverged) {
+        int maxIterations = 90;
+
+        for (int i=0; i < maxIterations; i++) {
             Job job = Job.getInstance(conf, "KMeans Clustering - Iteration " + (i + 1));
 
             // Add the seeds (centroids) file to the cache for this job
@@ -227,7 +228,6 @@ public class Task2c {
                     break;
                 }
             }
-            i++;
         }
 
         // End time and calculate total time

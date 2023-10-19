@@ -1,5 +1,6 @@
 import random
 import csv
+import os
 
 
 def generate_data_points(num_points):
@@ -21,8 +22,9 @@ def write_to_csv(filename, points):
 
 
 if __name__ == '__main__':
-    data_points = generate_data_points(5000)
-    write_to_csv('datasets/data_points.csv', data_points)
+    if not os.path.exists('datasets/data_points.csv'):    
+        data_points = generate_data_points(5000)
+        write_to_csv('datasets/data_points.csv', data_points)
 
     # generate K seed points
     K = int(input("Enter the value of K: "))

@@ -8,6 +8,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -61,7 +62,7 @@ public class Task2b {
             centroidKey.set(closestCentroid);
             pointValue.set(value);
 
-            context.write(centroidKey, pointValue);
+            context.write(centroidKey, pointValue); // output each point with its closest centroid but centroid is set as key
         }
 
         private String findClosestCentroid(String[] point) {
@@ -82,7 +83,7 @@ public class Task2b {
         }
     }
 
-    public static class KMeansReducer extends Reducer<Text, Text, Text, Text> {
+    public static class KMeansReducer extends Reducer<Text, Text, Text, NullWritable> {
 
         private Text newCentroid = new Text();
 
@@ -101,11 +102,13 @@ public class Task2b {
             int centroidX = sumX / count;
             int centroidY = sumY / count;
             newCentroid.set(centroidX + "," + centroidY);
-            context.write(key, newCentroid);
+            context.write(newCentroid, NullWritable.get()); // return only new centroids to match the format of the input for the first Mapper
         }
     }
 
     public static void main(String[] args) throws Exception {
+        // start time
+        long startTime = System.currentTimeMillis();
 
         if (args.length != 3) {
             System.err.println("Usage: KMeansDriver <input all points> <input path seeds> <output path>");
@@ -115,21 +118,20 @@ public class Task2b {
         Configuration conf = new Configuration();
         FileSystem fs = FileSystem.get(conf);
 
-        String inputPath = args[0];
-        String seedsPath = args[1];
+        String inputPath = args[0]; // stay the same through all iterations
+        String seedsPath = args[1]; // changes. first is added to cache file but in the next iteration add the file with /iteration_ to the inputPath
         String outputPathBase = args[2];
 
-        final int R = 10;
+        final int R = 30;
         for (int i = 0; i < R; i++) {
             Job job = Job.getInstance(conf, "KMeans Clustering - Iteration " + (i + 1));
-
-            // Add the seeds (centroids) file to the cache for this job
-            job.addCacheFile(new URI(seedsPath));
 
             job.setJarByClass(Task2b.class);
 
             // Set input path: For the first iteration, use the initial input. For subsequent iterations, use the output of the previous iteration
-            FileInputFormat.addInputPath(job, new Path(i == 0 ? inputPath : (outputPathBase + "/iteration_" + i)));
+            FileInputFormat.addInputPath(job, new Path(inputPath));
+            // Add the seeds/centroids file to the distributed cache for this job
+            job.addCacheFile(new URI(i == 0 ? seedsPath : (outputPathBase + "/iteration_" + i + "/part-r-00000")));
 
             // Set output path for this iteration
             Path outputPath = new Path(outputPathBase + "/iteration_" + (i + 1));
@@ -149,9 +151,12 @@ public class Task2b {
                 System.out.println("KMeans Clustering failed on iteration " + (i + 1));
                 System.exit(1);
             }
-
         }
 
-        System.out.println("KMeans Clustering completed after " + R + " iterations.");
+        // End time and calculate total time
+        long endTime = System.currentTimeMillis();
+        long elapsedTime = endTime - startTime;
+
+        System.out.println("KMeans Clustering for " + R + " iterations in Task 2b completed after: " + elapsedTime + " miliseconds");
     }
 }
