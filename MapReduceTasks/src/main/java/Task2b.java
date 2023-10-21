@@ -18,21 +18,11 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 public class Task2b {
 
-    public static class Point<X, Y> {
-        public final X x;
-        public final Y y;
-
-        public Point(X x, Y y) {
-            this.x = x;
-            this.y = y;
-        }
-    }
-
     public static class KMeansMapper extends Mapper<LongWritable, Text, Text, Text> {
 
         private Text centroidKey = new Text();
         private Text pointValue = new Text();
-        private ArrayList<Point<Integer, Integer>> seeds = new ArrayList<>();
+        private ArrayList<ConvergenceChecker.Point<Integer, Integer>> seeds = new ArrayList<>();
 
         @Override
         protected void setup(Context context) throws IOException, InterruptedException {
@@ -49,7 +39,7 @@ public class Task2b {
 
             while ((line = reader.readLine()) != null) {
                 String[] fields = line.split(",");
-                Point<Integer, Integer> seed = new Point<>(Integer.parseInt(fields[0]), Integer.parseInt(fields[1]));
+                ConvergenceChecker.Point<Integer, Integer> seed = new ConvergenceChecker.Point<>(Integer.parseInt(fields[0]), Integer.parseInt(fields[1]));
                 seeds.add(seed);
             }
         }
@@ -70,9 +60,9 @@ public class Task2b {
             int y = Integer.parseInt(point[1]);
 
             double currentMinDist = Double.MAX_VALUE;
-            Point<Integer, Integer> currentCentroid = null;
+            ConvergenceChecker.Point<Integer, Integer> currentCentroid = null;
 
-            for (Point<Integer, Integer> seed : seeds) {
+            for (ConvergenceChecker.Point<Integer, Integer> seed : seeds) {
                 double distance = Math.sqrt(Math.pow(x - seed.x, 2) + Math.pow(y - seed.y, 2));
                 if (distance < currentMinDist) {
                     currentMinDist = distance;
@@ -110,17 +100,12 @@ public class Task2b {
         // start time
         long startTime = System.currentTimeMillis();
 
-        if (args.length != 3) {
-            System.err.println("Usage: KMeansDriver <input all points> <input path seeds> <output path>");
-            System.exit(1);
-        }
-
         Configuration conf = new Configuration();
         FileSystem fs = FileSystem.get(conf);
 
-        String inputPath = args[0]; // stay the same through all iterations
-        String seedsPath = args[1]; // changes. first is added to cache file but in the next iteration add the file with /iteration_ to the inputPath
-        String outputPathBase = args[2];
+        String inputPath = "/user/ds503/input_project_2/data_points.csv"; // stay the same through all iterations
+        String seedsPath = "/user/ds503/input_project_2/15seed_points.csv"; // changes. first is added to cache file but in the next iteration add the file with /iteration_ to the inputPath
+        String outputPathBase = "/user/ds503/output_project_2/task_2b/k_15_r_30";
 
         final int R = 30;
         for (int i = 0; i < R; i++) {
@@ -158,5 +143,18 @@ public class Task2b {
         long elapsedTime = endTime - startTime;
 
         System.out.println("KMeans Clustering for " + R + " iterations in Task 2b completed after: " + elapsedTime + " miliseconds");
+
+        // check for overall convergence
+        boolean hasConverged = ConvergenceChecker.checkConvergence(
+                outputPathBase + "/iteration_" + (R-1) + "/part-r-00000",
+                outputPathBase + "/iteration_" + R + "/part-r-00000",
+                0.5
+        );
+
+        if (hasConverged){
+            System.out.println("Have reached convergence!");
+        } else {
+            System.out.println("Have not reached convergence yet!");
+        }
     }
 }

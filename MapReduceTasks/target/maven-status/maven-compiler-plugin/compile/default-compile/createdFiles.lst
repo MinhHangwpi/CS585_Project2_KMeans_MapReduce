@@ -1,13 +1,10 @@
 Task2b$KMeansReducer.class
-Task2d$Point.class
+ConvergenceChecker.class
 Task2a$KMeansMapper.class
 Task2b$KMeansMapper.class
-Task2eii$Point.class
-Task2c$Point.class
+ConvergenceChecker$Point.class
 Task2eii$KMeansReducer.class
-Task2a$Point.class
 Task2d$KMeansCombiner.class
-Task2b$Point.class
 Task2a$KMeansReducer.class
 Task2d$KMeansReducer.class
 Task2c.class

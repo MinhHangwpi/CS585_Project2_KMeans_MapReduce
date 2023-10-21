@@ -1,5 +1,9 @@
 --------- Task 2a ---------
-hadoop/bin/hadoop jar  /home/ds503/shared_folder/project-2-1.0-SNAPSHOT.jar Task2a /user/ds503/input_project_2/data_points.csv /user/ds503/input_project_2/20seed_points.csv /user/ds503/output_project_2/task_2a/k_20
+hadoop/bin/hadoop jar \
+/home/ds503/shared_folder/project-2-1.0-SNAPSHOT.jar Task2a \
+/user/ds503/input_project_2/data_points.csv /user/ds503/input_project_2/20seed_points.csv \
+/user/ds503/output_project_2/task_2a/k_20
+
 hadoop/bin/hdfs dfs -cat  /user/ds503/output_project_2/task_2a/k_5/part-r-00000
 
 --------- Task 2b ---------
@@ -30,7 +34,7 @@ hadoop/bin/hdfs dfs -copyToLocal /user/ds503/output_project_2/task_2b/k_15_r_30/
 hadoop/bin/hadoop jar  /home/ds503/shared_folder/project-2-1.0-SNAPSHOT.jar Task2c \
 /user/ds503/input_project_2/data_points.csv \
  /user/ds503/input_project_2/20seed_points.csv \
- /user/ds503/output_project_2/task_2c/k_20_r_90
+ /user/ds503/output_project_2/task_2c/k_20_r_20
 
 hadoop/bin/hdfs dfs -mv /user/ds503/output_project_2/task_2c/k_20_r_30 /user/ds503/output_project_2/task_2c/k_20_r_50
 
@@ -62,8 +66,8 @@ hadoop/bin/hdfs dfs -mkdir /user/ds503/output_project_2/task_2d/k_10_r_50
 hadoop/bin/hadoop jar \
  /home/ds503/shared_folder/project-2-1.0-SNAPSHOT.jar Task2eii \
  /user/ds503/input_project_2/data_points.csv \
- /user/ds503/input_project_2/10seed_points.csv \
- /user/ds503/output_project_2/task_2eii
+ /user/ds503/input_project_2/20seed_points.csv \
+ /user/ds503/output_project_2/task_2eii/k_20
 
 
 hadoop/bin/hdfs dfs -copyToLocal /user/ds503/output_project_2/task_2eii/final_clusters/part-r-00000  /home/ds503/shared_folder/
