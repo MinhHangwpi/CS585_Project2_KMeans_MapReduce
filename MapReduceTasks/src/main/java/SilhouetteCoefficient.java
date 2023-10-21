@@ -45,9 +45,7 @@ public class SilhouetteCoefficient {
         }
     }
 
-    public enum Counters {
-        NUM_KEYS
-    }
+    public static int COUNTER_NAME = 0;
 
     public static class ValueMapper extends Mapper<LongWritable, Text, Text, Text> {
         private final Text outKey = new Text();
@@ -67,7 +65,7 @@ public class SilhouetteCoefficient {
                 outKey.set(mainKey);
                 output.set(values.toString());
                 context.write(outKey, output);
-                context.getCounter(Counters.NUM_KEYS).increment(1);
+                COUNTER_NAME++;
             }
         }
     }
@@ -187,12 +185,12 @@ public class SilhouetteCoefficient {
             String[] parts = value.toString().split(",");
             if (parts.length > 2) {
                 double column3Value = Double.parseDouble(parts[2]);
-                context.write(new Text("Silhouette Coefficient"), new DoubleWritable(column3Value));
+                context.write(new Text("Silhouette Coefficient for k = " + COUNTER_NAME), new DoubleWritable(column3Value));
             }
         }
     }
 
-    public static class SilhouetteReducerFour extends Reducer<Text, DoubleWritable, Text, DoubleWritable> {
+    public static class SilhouetteReducerFour extends Reducer<Text, DoubleWritable, Text, Text> {
         public void reduce(Text key, Iterable<DoubleWritable> values, Context context)
                 throws IOException, InterruptedException {
             double sum = 0.0;
@@ -203,7 +201,7 @@ public class SilhouetteCoefficient {
             }
             if (count > 0) {
                 double average = sum / count;
-                context.write(key, new DoubleWritable(average));
+                context.write(key, new Text(String.format("%.4f", average)));
             }
         }
     }
@@ -285,8 +283,7 @@ public class SilhouetteCoefficient {
                     long seconds = (elapsedTime / 1000) % 60;
                     long minutes = (elapsedTime / (1000 * 60)) % 60;
 
-                    Counter counter = job2.getCounters().findCounter(Counters.NUM_KEYS);
-                    StringBuilder output = new StringBuilder("Total execution time for calculating the silhouette coefficient for k = " + counter.getValue() + " is ");
+                    StringBuilder output = new StringBuilder("Total execution time is ");
                     if (minutes > 0) {
                         output.append(minutes).append(" minutes, ");
                     }
