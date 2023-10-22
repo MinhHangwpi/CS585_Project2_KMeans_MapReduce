@@ -8,6 +8,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -17,21 +18,11 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 public class Task2b {
 
-    public static class Point<X, Y> {
-        public final X x;
-        public final Y y;
-
-        public Point(X x, Y y) {
-            this.x = x;
-            this.y = y;
-        }
-    }
-
     public static class KMeansMapper extends Mapper<LongWritable, Text, Text, Text> {
 
         private Text centroidKey = new Text();
         private Text pointValue = new Text();
-        private ArrayList<Point<Integer, Integer>> seeds = new ArrayList<>();
+        private ArrayList<ConvergenceChecker.Point<Integer, Integer>> seeds = new ArrayList<>();
 
         @Override
         protected void setup(Context context) throws IOException, InterruptedException {
@@ -48,7 +39,7 @@ public class Task2b {
 
             while ((line = reader.readLine()) != null) {
                 String[] fields = line.split(",");
-                Point<Integer, Integer> seed = new Point<>(Integer.parseInt(fields[0]), Integer.parseInt(fields[1]));
+                ConvergenceChecker.Point<Integer, Integer> seed = new ConvergenceChecker.Point<>(Integer.parseInt(fields[0]), Integer.parseInt(fields[1]));
                 seeds.add(seed);
             }
         }
@@ -61,7 +52,7 @@ public class Task2b {
             centroidKey.set(closestCentroid);
             pointValue.set(value);
 
-            context.write(centroidKey, pointValue);
+            context.write(centroidKey, pointValue); // output each point with its closest centroid but centroid is set as key
         }
 
         private String findClosestCentroid(String[] point) {
@@ -69,9 +60,9 @@ public class Task2b {
             int y = Integer.parseInt(point[1]);
 
             double currentMinDist = Double.MAX_VALUE;
-            Point<Integer, Integer> currentCentroid = null;
+            ConvergenceChecker.Point<Integer, Integer> currentCentroid = null;
 
-            for (Point<Integer, Integer> seed : seeds) {
+            for (ConvergenceChecker.Point<Integer, Integer> seed : seeds) {
                 double distance = Math.sqrt(Math.pow(x - seed.x, 2) + Math.pow(y - seed.y, 2));
                 if (distance < currentMinDist) {
                     currentMinDist = distance;
@@ -82,7 +73,7 @@ public class Task2b {
         }
     }
 
-    public static class KMeansReducer extends Reducer<Text, Text, Text, Text> {
+    public static class KMeansReducer extends Reducer<Text, Text, Text, NullWritable> {
 
         private Text newCentroid = new Text();
 
@@ -101,35 +92,31 @@ public class Task2b {
             int centroidX = sumX / count;
             int centroidY = sumY / count;
             newCentroid.set(centroidX + "," + centroidY);
-            context.write(key, newCentroid);
+            context.write(newCentroid, NullWritable.get()); // return only new centroids to match the format of the input for the first Mapper
         }
     }
 
     public static void main(String[] args) throws Exception {
-
-        if (args.length != 3) {
-            System.err.println("Usage: KMeansDriver <input all points> <input path seeds> <output path>");
-            System.exit(1);
-        }
+        // start time
+        long startTime = System.currentTimeMillis();
 
         Configuration conf = new Configuration();
         FileSystem fs = FileSystem.get(conf);
 
-        String inputPath = args[0];
-        String seedsPath = args[1];
-        String outputPathBase = args[2];
+        String inputPath = "/user/ds503/input_project_2/data_points.csv"; // stay the same through all iterations
+        String seedsPath = "/user/ds503/input_project_2/15seed_points.csv"; // changes. first is added to cache file but in the next iteration add the file with /iteration_ to the inputPath
+        String outputPathBase = "/user/ds503/output_project_2/task_2b/k_15_r_30";
 
-        final int R = 10;
+        final int R = 30;
         for (int i = 0; i < R; i++) {
             Job job = Job.getInstance(conf, "KMeans Clustering - Iteration " + (i + 1));
-
-            // Add the seeds (centroids) file to the cache for this job
-            job.addCacheFile(new URI(seedsPath));
 
             job.setJarByClass(Task2b.class);
 
             // Set input path: For the first iteration, use the initial input. For subsequent iterations, use the output of the previous iteration
-            FileInputFormat.addInputPath(job, new Path(i == 0 ? inputPath : (outputPathBase + "/iteration_" + i)));
+            FileInputFormat.addInputPath(job, new Path(inputPath));
+            // Add the seeds/centroids file to the distributed cache for this job
+            job.addCacheFile(new URI(i == 0 ? seedsPath : (outputPathBase + "/iteration_" + i + "/part-r-00000")));
 
             // Set output path for this iteration
             Path outputPath = new Path(outputPathBase + "/iteration_" + (i + 1));
@@ -149,9 +136,25 @@ public class Task2b {
                 System.out.println("KMeans Clustering failed on iteration " + (i + 1));
                 System.exit(1);
             }
-
         }
 
-        System.out.println("KMeans Clustering completed after " + R + " iterations.");
+        // End time and calculate total time
+        long endTime = System.currentTimeMillis();
+        long elapsedTime = endTime - startTime;
+
+        System.out.println("KMeans Clustering for " + R + " iterations in Task 2b completed after: " + elapsedTime + " miliseconds");
+
+        // check for overall convergence
+        boolean hasConverged = ConvergenceChecker.checkConvergence(
+                outputPathBase + "/iteration_" + (R-1) + "/part-r-00000",
+                outputPathBase + "/iteration_" + R + "/part-r-00000",
+                0.5
+        );
+
+        if (hasConverged){
+            System.out.println("Have reached convergence!");
+        } else {
+            System.out.println("Have not reached convergence yet!");
+        }
     }
 }
