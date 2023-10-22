@@ -118,7 +118,7 @@ public class Task2c {
 
         boolean hasConverged = false;
 
-        int maxIterations = 20;
+        int maxIterations = 50;
 
         for (int i=0; i < maxIterations; i++) {
             Job job = Job.getInstance(conf, "KMeans Clustering - Iteration " + (i + 1));

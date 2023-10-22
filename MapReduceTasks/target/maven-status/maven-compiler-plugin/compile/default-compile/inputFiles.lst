@@ -1,7 +1,13 @@
+/home/hang/Documents/cs585_ds503/CS585_Project2_KMeans_MapReduce/MapReduceTasks/src/main/java/KMPoint.java
 /home/hang/Documents/cs585_ds503/CS585_Project2_KMeans_MapReduce/MapReduceTasks/src/main/java/Task2c.java
-/home/hang/Documents/cs585_ds503/CS585_Project2_KMeans_MapReduce/MapReduceTasks/src/main/java/ConvergenceChecker.java
-/home/hang/Documents/cs585_ds503/CS585_Project2_KMeans_MapReduce/MapReduceTasks/src/main/java/Task2b.java
+/home/hang/Documents/cs585_ds503/CS585_Project2_KMeans_MapReduce/MapReduceTasks/src/main/java/KMCentroid.java
 /home/hang/Documents/cs585_ds503/CS585_Project2_KMeans_MapReduce/MapReduceTasks/src/main/java/Task2d.java
-/home/hang/Documents/cs585_ds503/CS585_Project2_KMeans_MapReduce/MapReduceTasks/src/main/java/Task2eii.java
 /home/hang/Documents/cs585_ds503/CS585_Project2_KMeans_MapReduce/MapReduceTasks/src/main/java/Task2ei.java
 /home/hang/Documents/cs585_ds503/CS585_Project2_KMeans_MapReduce/MapReduceTasks/src/main/java/Task2a.java
+/home/hang/Documents/cs585_ds503/CS585_Project2_KMeans_MapReduce/MapReduceTasks/src/main/java/KMAggregatePoint.java
+/home/hang/Documents/cs585_ds503/CS585_Project2_KMeans_MapReduce/MapReduceTasks/src/main/java/KMCluster.java
+/home/hang/Documents/cs585_ds503/CS585_Project2_KMeans_MapReduce/MapReduceTasks/src/main/java/ConvergenceChecker.java
+/home/hang/Documents/cs585_ds503/CS585_Project2_KMeans_MapReduce/MapReduceTasks/src/main/java/KMMultiDim.java
+/home/hang/Documents/cs585_ds503/CS585_Project2_KMeans_MapReduce/MapReduceTasks/src/main/java/Task2b.java
+/home/hang/Documents/cs585_ds503/CS585_Project2_KMeans_MapReduce/MapReduceTasks/src/main/java/Task2eii.java
+/home/hang/Documents/cs585_ds503/CS585_Project2_KMeans_MapReduce/MapReduceTasks/src/main/java/SilhouetteCoefficient.java

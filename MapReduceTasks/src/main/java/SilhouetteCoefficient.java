@@ -208,28 +208,34 @@ public class SilhouetteCoefficient {
 
     public static void main(String[] args) throws Exception {
         long startTime = System.currentTimeMillis();
-        if (args.length != 6) {
-            System.err.println("Usage: <className> <path_to_input> <path_to_temp_output_1> <path_to_temp_output_2> <path_to_temp_output_3> <path_to_output_final>");
-            System.exit(1);
-        }
+//        if (args.length != 6) {
+//            System.err.println("Usage: <className> <path_to_input> <path_to_temp_output_1> <path_to_temp_output_2> <path_to_temp_output_3> <path_to_output_final>");
+//            System.exit(1);
+//        }
+        String inputStringPath = "/user/ds503/input_project_2/silhouette/5_seeds";
+        String outputTempPath1 = "/user/ds503/output_project_2/silhouette/5_seeds/output_temp_1";
+        String outputTempPath2 = "/user/ds503/output_project_2/silhouette/5_seeds/output_temp_2";
+        String outputTempPath3 = "/user/ds503/output_project_2/silhouette/5_seeds/output_temp_3";
+        String outputFinalPath = "/user/ds503/output_project_2/silhouette/5_seeds/final_output";
+
         Configuration conf = new Configuration();
         conf.set("mapreduce.output.textoutputformat.separator", ",");
         Job job1 = Job.getInstance(conf, "Grouping by ID");
         FileSystem fs = FileSystem.get(conf);
-        Path InputPath = new Path(args[1]);
-        Path tempOutputPath1 = new Path(args[2]);
+        Path InputPath = new Path(inputStringPath);
+        Path tempOutputPath1 = new Path(outputTempPath1);
         if (fs.exists(tempOutputPath1)) {
             fs.delete(tempOutputPath1, true);
         }
-        Path tempOutputPath2 = new Path(args[3]);
+        Path tempOutputPath2 = new Path(outputTempPath2);
         if (fs.exists(tempOutputPath2)) {
             fs.delete(tempOutputPath2, true);
         }
-        Path finalOutputPath = new Path(args[4]);
+        Path finalOutputPath = new Path(outputTempPath3); // why isn't this named tempOutputPath3 since we have a "super final output" below?
         if (fs.exists(finalOutputPath)) {
             fs.delete(finalOutputPath, true);
         }
-        Path superFinalOutputPath = new Path(args[5]);
+        Path superFinalOutputPath = new Path(outputFinalPath);
         if (fs.exists(superFinalOutputPath)) {
             fs.delete(superFinalOutputPath, true);
         }

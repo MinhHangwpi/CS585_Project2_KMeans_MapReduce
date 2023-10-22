@@ -83,3 +83,12 @@ hadoop/bin/hdfs dfs -copyToLocal /user/ds503/output_project_2/task_2a/k_20/part-
 
 
 hadoop/bin/hdfs dfs -copyToLocal /user/ds503/output_project_2/task_2eii/final_clusters/part-r-00000  /home/ds503/shared_folder/task_2eii
+
+
+------------------
+Sihouette
+
+
+hadoop/bin/hadoop jar \
+ /home/ds503/shared_folder/project-2-1.0-SNAPSHOT.jar SilhouetteCoefficient
+
