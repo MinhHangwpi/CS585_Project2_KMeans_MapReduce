@@ -2,7 +2,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -208,36 +207,27 @@ public class SilhouetteCoefficient {
 
     public static void main(String[] args) throws Exception {
         long startTime = System.currentTimeMillis();
-//        if (args.length != 6) {
-//            System.err.println("Usage: <className> <path_to_input> <path_to_temp_output_1> <path_to_temp_output_2> <path_to_temp_output_3> <path_to_output_final>");
-//            System.exit(1);
-//        }
-        String inputStringPath = "/user/ds503/input_project_2/silhouette/5_seeds";
-        String outputTempPath1 = "/user/ds503/output_project_2/silhouette/5_seeds/output_temp_1";
-        String outputTempPath2 = "/user/ds503/output_project_2/silhouette/5_seeds/output_temp_2";
-        String outputTempPath3 = "/user/ds503/output_project_2/silhouette/5_seeds/output_temp_3";
-        String outputFinalPath = "/user/ds503/output_project_2/silhouette/5_seeds/final_output";
 
         Configuration conf = new Configuration();
         conf.set("mapreduce.output.textoutputformat.separator", ",");
         Job job1 = Job.getInstance(conf, "Grouping by ID");
         FileSystem fs = FileSystem.get(conf);
-        Path InputPath = new Path(inputStringPath);
-        Path tempOutputPath1 = new Path(outputTempPath1);
+        Path InputPath = new Path("Input/task_2eii/k_10/part-r-00000");
+        Path tempOutputPath1 = new Path("Output/output_silhouette_temp1");
         if (fs.exists(tempOutputPath1)) {
             fs.delete(tempOutputPath1, true);
         }
-        Path tempOutputPath2 = new Path(outputTempPath2);
+        Path tempOutputPath2 = new Path("Output/output_silhouette_temp2");
         if (fs.exists(tempOutputPath2)) {
             fs.delete(tempOutputPath2, true);
         }
-        Path finalOutputPath = new Path(outputTempPath3); // why isn't this named tempOutputPath3 since we have a "super final output" below?
+        Path tempOutputPath3 = new Path("Output/output_silhouette_temp3");
+        if (fs.exists(tempOutputPath3)) {
+            fs.delete(tempOutputPath3, true);
+        }
+        Path finalOutputPath = new Path("Output/output_silhouette_final");
         if (fs.exists(finalOutputPath)) {
             fs.delete(finalOutputPath, true);
-        }
-        Path superFinalOutputPath = new Path(outputFinalPath);
-        if (fs.exists(superFinalOutputPath)) {
-            fs.delete(superFinalOutputPath, true);
         }
         job1.setJarByClass(SilhouetteCoefficient.class);
         job1.setMapperClass(SilhouetteMapperOne.class);
@@ -268,7 +258,7 @@ public class SilhouetteCoefficient {
                 job3.setOutputValueClass(Text.class);
                 MultipleInputs.addInputPath(job3, tempOutputPath2, TextInputFormat.class, SilhouetteCoefficient.SilhouetteMapperThree.class);
                 MultipleInputs.addInputPath(job3, InputPath, TextInputFormat.class, SilhouetteCoefficient.SilhouetteMapperTwo.class);
-                FileOutputFormat.setOutputPath(job3, finalOutputPath);
+                FileOutputFormat.setOutputPath(job3, tempOutputPath3);
                 boolean job3success = job3.waitForCompletion(true);
                 if (job3success) {
                     Job job4 = Job.getInstance(conf, "Average Silhouette Coefficient");
@@ -277,8 +267,8 @@ public class SilhouetteCoefficient {
                     job4.setReducerClass(SilhouetteReducerFour.class);
                     job4.setOutputKeyClass(Text.class);
                     job4.setOutputValueClass(DoubleWritable.class);
-                    FileInputFormat.addInputPath(job4, finalOutputPath);
-                    FileOutputFormat.setOutputPath(job4, superFinalOutputPath);
+                    FileInputFormat.addInputPath(job4, tempOutputPath3);
+                    FileOutputFormat.setOutputPath(job4, finalOutputPath);
                     boolean job4success = job4.waitForCompletion(true);
 
                     // Calculate and print the elapsed time after job2 finishes
