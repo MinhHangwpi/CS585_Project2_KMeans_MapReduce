@@ -16,7 +16,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
-public class Task2b {
+public class Task2d {
 
     public static class KMeansMapper extends Mapper<LongWritable, Text, Text, Text> {
 
@@ -26,6 +26,8 @@ public class Task2b {
 
         @Override
         protected void setup(Context context) throws IOException, InterruptedException {
+
+            // populating the seeds array list with values from file in distributed cache
             URI[] cacheFiles = context.getCacheFiles();
             Path path = new Path(cacheFiles[0]);
 
@@ -45,14 +47,15 @@ public class Task2b {
         }
 
         public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-            String[] point = value.toString().split(",");
+
+            String[] point = value.toString().split(","); // each line is a point (x, y)
 
             String closestCentroid = findClosestCentroid(point);
 
             centroidKey.set(closestCentroid);
             pointValue.set(value);
 
-            context.write(centroidKey, pointValue); // output each point with its closest centroid but centroid is set as key
+            context.write(centroidKey, pointValue);  // output the closest centroid and each point # 5000 lines
         }
 
         private String findClosestCentroid(String[] point) {
@@ -73,51 +76,81 @@ public class Task2b {
         }
     }
 
-    public static class KMeansReducer extends Reducer<Text, Text, Text, NullWritable> {
 
-        private Text newCentroid = new Text();
+    public static class KMeansCombiner extends Reducer<Text, Text, Text, Text> {
+        private Text partialSum = new Text();
 
         @Override
-        protected void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+        protected void reduce (Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
             int sumX = 0;
             int sumY = 0;
             int count = 0;
 
-            for (Text value : values) {
+            for (Text value: values){
                 String[] point = value.toString().split(",");
                 sumX += Integer.parseInt(point[0].trim());
                 sumY += Integer.parseInt(point[1].trim());
                 count++;
             }
-            int centroidX = sumX / count;
-            int centroidY = sumY / count;
+
+            // Write partial sum and count, separated by a comma
+            partialSum.set(sumX + "," + sumY + "," + count);
+            context.write(key, partialSum); // (centroidKey and partialSum)
+        }
+    }
+
+    public static class KMeansReducer extends Reducer<Text, Text, Text, NullWritable> {
+        /**
+         * The reduce function receives a key-value pair where the key is a centroid and the values are the list of points that are closest to that centroid.
+         */
+        private Text newCentroid = new Text();
+
+        @Override
+        protected void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+            int totalSumX = 0;
+            int totalSumY = 0;
+            int totalCount = 0;
+
+            for (Text value : values) {
+                String[] aggregatedData = value.toString().split(",");
+                totalSumX += Integer.parseInt(aggregatedData[0].trim());
+                totalSumY += Integer.parseInt(aggregatedData[1].trim());
+                totalCount += Integer.parseInt(aggregatedData[2].trim());
+            }
+
+            int centroidX = totalSumX / totalCount;
+            int centroidY = totalSumY / totalCount;
             newCentroid.set(centroidX + "," + centroidY);
-            context.write(newCentroid, NullWritable.get()); // return only new centroids to match the format of the input for the first Mapper
+            context.write(newCentroid, NullWritable.get());
         }
     }
 
     public static void main(String[] args) throws Exception {
-        // start time
+
+        // Start time
         long startTime = System.currentTimeMillis();
 
         Configuration conf = new Configuration();
         FileSystem fs = FileSystem.get(conf);
 
-        String inputPath = "/user/ds503/input_project_2/data_points.csv"; // stay the same through all iterations
-        String seedsPath = "/user/ds503/input_project_2/15seed_points.csv"; // changes. first is added to cache file but in the next iteration add the file with /iteration_ to the inputPath
-        String outputPathBase = "/user/ds503/output_project_2/task_2b/k_15_r_30";
+        String inputPath = "/user/ds503/input_project_2/data_points.csv";
+        String seedsPath = "/user/ds503/input_project_2/10seed_points.csv";
+        String outputPathBase = "/user/ds503/output_project_2/task_2d/k_10_r_50";
 
-        final int R = 30;
-        for (int i = 0; i < R; i++) {
+        boolean hasConverged = false;
+
+        int maxIterations = 90;
+
+        for (int i=0; i < maxIterations; i++) {
             Job job = Job.getInstance(conf, "KMeans Clustering - Iteration " + (i + 1));
 
-            job.setJarByClass(Task2b.class);
+            // Add the seeds (centroids) file to the cache for this job
+            job.addCacheFile(new URI(i == 0 ? seedsPath : (outputPathBase + "/iteration_" + i + "/part-r-00000")));
+
+            job.setJarByClass(Task2d.class);
 
             // Set input path: For the first iteration, use the initial input. For subsequent iterations, use the output of the previous iteration
             FileInputFormat.addInputPath(job, new Path(inputPath));
-            // Add the seeds/centroids file to the distributed cache for this job
-            job.addCacheFile(new URI(i == 0 ? seedsPath : (outputPathBase + "/iteration_" + i + "/part-r-00000")));
-
             // Set output path for this iteration
             Path outputPath = new Path(outputPathBase + "/iteration_" + (i + 1));
             if (fs.exists(outputPath)) {
@@ -126,35 +159,42 @@ public class Task2b {
             FileOutputFormat.setOutputPath(job, outputPath);
 
             job.setMapperClass(KMeansMapper.class);
+            job.setCombinerClass(KMeansCombiner.class);
             job.setReducerClass(KMeansReducer.class);
 
             job.setOutputKeyClass(Text.class);
             job.setOutputValueClass(Text.class);
 
+            // Running the map reduce job for the iteration
             boolean success = job.waitForCompletion(true);
             if (!success) {
                 System.out.println("KMeans Clustering failed on iteration " + (i + 1));
                 System.exit(1);
             }
+
+            //Check for convergence by comparing the centroids from this iteration to the previous iteration. Break if it has converged
+            if (i > 0) {
+                hasConverged = ConvergenceChecker.checkConvergence(
+                        outputPathBase + "/iteration_" + i + "/part-r-00000",
+                        outputPathBase + "/iteration_" + (i + 1) + "/part-r-00000",
+                        0.5
+                ); // should this be /iteration_ i + 1
+                if (hasConverged) {
+                    System.out.println("KMeans Clustering converged after " + (i + 1) + " iterations.");
+                    break;
+                }
+            }
         }
 
         // End time and calculate total time
         long endTime = System.currentTimeMillis();
-        long elapsedTime = endTime - startTime;
+        long totalTime = endTime - startTime;
+        System.out.println("Total runtime: " + totalTime + " milliseconds");
 
-        System.out.println("KMeans Clustering for " + R + " iterations in Task 2b completed after: " + elapsedTime + " miliseconds");
-
-        // check for overall convergence
-        boolean hasConverged = ConvergenceChecker.checkConvergence(
-                outputPathBase + "/iteration_" + (R-1) + "/part-r-00000",
-                outputPathBase + "/iteration_" + R + "/part-r-00000",
-                0.5
-        );
-
-        if (hasConverged){
-            System.out.println("Have reached convergence!");
+        if(hasConverged) {
+            System.out.println("The KMeans clustering has converged.");
         } else {
-            System.out.println("Have not reached convergence yet!");
+            System.out.println("The KMeans clustering has NOT converged after " + maxIterations + " iterations.");
         }
     }
 }

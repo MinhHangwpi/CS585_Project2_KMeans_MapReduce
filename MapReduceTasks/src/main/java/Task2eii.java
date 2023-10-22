@@ -16,7 +16,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
-public class Task2c {
+public class Task2eii {
 
     public static class KMeansMapper extends Mapper<LongWritable, Text, Text, Text> {
 
@@ -76,30 +76,51 @@ public class Task2c {
         }
     }
 
-    public static class KMeansReducer extends Reducer<Text, Text, Text, NullWritable> {
 
-        /**
-         * The reduce function receives a key-value pair where the key is a centroid and the values are the list of points that are closest to that centroid.
-         */
-        private Text newCentroid = new Text();
+    public static class KMeansCombiner extends Reducer<Text, Text, Text, Text> {
+        private Text partialSum = new Text();
 
         @Override
-        protected void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+        protected void reduce (Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
             int sumX = 0;
             int sumY = 0;
             int count = 0;
 
-            for (Text value : values) {
+            for (Text value: values){
                 String[] point = value.toString().split(",");
                 sumX += Integer.parseInt(point[0].trim());
                 sumY += Integer.parseInt(point[1].trim());
                 count++;
             }
-            int centroidX = sumX / count;
-            int centroidY = sumY / count;
+            // Write partial sum and count, separated by a comma
+            partialSum.set(sumX + "," + sumY + "," + count);
+            context.write(key, partialSum);
+        }
+    }
+
+    public static class KMeansReducer extends Reducer<Text, Text, Text, NullWritable> {
+        /**
+         * The reduce function receives a key-value pair where the key is a centroid and the values are the list of points that are closest to that centroid.
+         */
+        private Text newCentroid = new Text();
+        @Override
+        protected void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+            int totalSumX = 0;
+            int totalSumY = 0;
+            int totalCount = 0;
+
+            for (Text value : values) {
+                String[] aggregatedData = value.toString().split(",");
+                totalSumX += Integer.parseInt(aggregatedData[0].trim());
+                totalSumY += Integer.parseInt(aggregatedData[1].trim());
+                totalCount += Integer.parseInt(aggregatedData[2].trim());
+            }
+
+            int centroidX = totalSumX / totalCount;
+            int centroidY = totalSumY / totalCount;
             newCentroid.set(centroidX + "," + centroidY);
 
-            context.write(newCentroid, NullWritable.get()); // return just new centroid as we are setting the value to null
+            context.write(newCentroid, NullWritable.get());
         }
     }
 
@@ -108,25 +129,27 @@ public class Task2c {
         // Start time
         long startTime = System.currentTimeMillis();
 
-
         Configuration conf = new Configuration();
         FileSystem fs = FileSystem.get(conf);
 
         String inputPath = "/user/ds503/input_project_2/data_points.csv";
         String seedsPath = "/user/ds503/input_project_2/20seed_points.csv";
-        String outputPathBase = "/user/ds503/output_project_2/task_2c/k_20_r_20";
+        String outputPathBase = "/user/ds503/output_project_2/task_2eii/k_20";
 
         boolean hasConverged = false;
 
-        int maxIterations = 20;
+        int i;
 
-        for (int i=0; i < maxIterations; i++) {
+        int maxIterations = 50;
+        int finalIterationIndex = 0;
+
+        for (i=0; i < maxIterations; i++) {
             Job job = Job.getInstance(conf, "KMeans Clustering - Iteration " + (i + 1));
 
             // Add the seeds (centroids) file to the cache for this job
             job.addCacheFile(new URI(i == 0 ? seedsPath : (outputPathBase + "/iteration_" + i + "/part-r-00000")));
 
-            job.setJarByClass(Task2c.class);
+            job.setJarByClass(Task2eii.class);
 
             // Set input path: For the first iteration, use the initial input. For subsequent iterations, use the output of the previous iteration
             FileInputFormat.addInputPath(job, new Path(inputPath));
@@ -138,6 +161,7 @@ public class Task2c {
             FileOutputFormat.setOutputPath(job, outputPath);
 
             job.setMapperClass(KMeansMapper.class);
+            job.setCombinerClass(KMeansCombiner.class);
             job.setReducerClass(KMeansReducer.class);
 
             job.setOutputKeyClass(Text.class);
@@ -156,13 +180,42 @@ public class Task2c {
                         outputPathBase + "/iteration_" + i + "/part-r-00000",
                         outputPathBase + "/iteration_" + (i + 1) + "/part-r-00000",
                         0.5
-                ); // should this be /iteration_ i + 1
+                );
                 if (hasConverged) {
-                    System.out.println("KMeans Clustering converged after " + (i + 1) + " iterations.");
+                    finalIterationIndex = i + 1;
+                    System.out.println("KMeans Clustering converged after " + finalIterationIndex + " iterations.");
                     break;
                 }
             }
         }
+
+        if (!hasConverged){
+            finalIterationIndex = maxIterations;
+        }
+
+        // Mapping data points to final clusters
+        Job clusterMappingJob = Job.getInstance(conf, "Mapping Data to Clusters");
+
+        clusterMappingJob.addCacheFile(new URI(outputPathBase + "/iteration_" + finalIterationIndex + "/part-r-00000")); // final centroids as cache
+
+        clusterMappingJob.setJarByClass(Task2eii.class);
+
+        FileInputFormat.addInputPath(clusterMappingJob, new Path(inputPath));
+
+        Path finalOutputPath = new Path(outputPathBase + "/final_clusters");
+        if (fs.exists(finalOutputPath)) {
+            fs.delete(finalOutputPath, true);
+        }
+        FileOutputFormat.setOutputPath(clusterMappingJob, finalOutputPath);
+
+        clusterMappingJob.setMapperClass(KMeansMapper.class);
+        clusterMappingJob.setReducerClass(Reducer.class);  // use default IdentityReducer
+
+        clusterMappingJob.setOutputKeyClass(Text.class);
+        clusterMappingJob.setOutputValueClass(Text.class);
+
+        clusterMappingJob.waitForCompletion(true);
+
 
         // End time and calculate total time
         long endTime = System.currentTimeMillis();
@@ -170,7 +223,7 @@ public class Task2c {
         System.out.println("Total runtime: " + totalTime + " milliseconds");
 
         if(hasConverged) {
-            System.out.println("The KMeans clustering has converged.");
+            System.out.println("The KMeans clustering has converged after " + finalIterationIndex + " iterations.");
         } else {
             System.out.println("The KMeans clustering has NOT converged after " + maxIterations + " iterations.");
         }

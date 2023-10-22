@@ -8,6 +8,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -17,25 +18,15 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 public class Task2a {
 
-    public static class Point<X, Y> {
-        public final X x;
-        public final Y y;
-
-        public Point(X x, Y y) {
-            this.x = x;
-            this.y = y;
-        }
-    }
-
     public static class KMeansMapper extends Mapper<LongWritable, Text, Text, Text> {
 
         private Text centroidKey = new Text();
         private Text pointValue = new Text();
-        private ArrayList<Point<Integer, Integer>> seeds = new ArrayList<>();
+        private ArrayList<ConvergenceChecker.Point<Integer, Integer>> seeds = new ArrayList<>();
 
         @Override
         protected void setup(Context context) throws IOException, InterruptedException {
-            Configuration conf = context.getConfiguration();
+
             URI[] cacheFiles = context.getCacheFiles();
             Path path = new Path(cacheFiles[0]);
 
@@ -49,7 +40,7 @@ public class Task2a {
 
             while ((line = reader.readLine()) != null) {
                 String[] fields = line.split(",");
-                Point<Integer, Integer> seed = new Point<>(Integer.parseInt(fields[0]), Integer.parseInt(fields[1]));
+                ConvergenceChecker.Point<Integer, Integer> seed = new ConvergenceChecker.Point<>(Integer.parseInt(fields[0]), Integer.parseInt(fields[1]));
                 seeds.add(seed);
             }
         }
@@ -70,9 +61,9 @@ public class Task2a {
             int y = Integer.parseInt(point[1]);
 
             double currentMinDist = Double.MAX_VALUE;
-            Point<Integer, Integer> currentCentroid = null;
+            ConvergenceChecker.Point<Integer, Integer> currentCentroid = null;
 
-            for (Point<Integer, Integer> seed : seeds) {
+            for (ConvergenceChecker.Point<Integer, Integer> seed : seeds) {
                 double distance = Math.sqrt(Math.pow(x - seed.x, 2) + Math.pow(y - seed.y, 2));
                 if (distance < currentMinDist) {
                     currentMinDist = distance;
@@ -83,10 +74,8 @@ public class Task2a {
         }
     }
 
-    public static class KMeansReducer extends Reducer<Text, Text, Text, Text> {
-
+    public static class KMeansReducer extends Reducer<Text, Text, Text, NullWritable> {
         private Text newCentroid = new Text();
-
         @Override
         protected void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
             int sumX = 0;
@@ -104,34 +93,33 @@ public class Task2a {
             int centroidY = sumY / count;
             newCentroid.set(centroidX + "," + centroidY);
 
-            context.write(key, newCentroid);
+            context.write(newCentroid, NullWritable.get());
         }
     }
 
     public static void main(String[] args) throws Exception {
 
-        if (args.length != 3) {
-            System.err.println("Usage: KMeansDriver <input all points> <input path seeds> <output path>");
-            System.exit(1);
-        }
-
         Configuration conf = new Configuration();
 
         // clean up output directories if they exist currently
         FileSystem fs = FileSystem.get(conf);
-        Path outPath = new Path(args[2]);
+
+        String inputPath = "/user/ds503/input_project_2/data_points.csv";
+        String seedsPath = "/user/ds503/input_project_2/10seed_points.csv";
+        String outputPath = "/user/ds503/output_project_2/task_2a/k_10";
+
+        Path outPath = new Path(outputPath); // output path
         if (fs.exists(outPath)) {
             fs.delete(outPath, true);
         }
-
         Job job = Job.getInstance(conf, "KMeans Clustering");
+        Path inputAllDataPath = new Path(inputPath);
 
-        job.addCacheFile(new URI(args[1]));
-
+        job.addCacheFile(new URI(seedsPath)); // path to the initial seed point files
         job.setJarByClass(Task2a.class);
 
-        FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileOutputFormat.setOutputPath(job, new Path(args[2]));
+        FileInputFormat.addInputPath(job, inputAllDataPath); // path to the full data set
+        FileOutputFormat.setOutputPath(job, outPath);
 
         job.setMapperClass(KMeansMapper.class);
         job.setReducerClass(KMeansReducer.class);
@@ -144,7 +132,20 @@ public class Task2a {
         long endTime = System.currentTimeMillis();
         long elapsedTime = endTime - startTime;
 
-        System.out.println("Job execution time for Task 2a - Single K-Means iteration: " + elapsedTime + "milliseconds.");
+        System.out.println("Job execution time for Task 2a - Single K-Means iteration: " + elapsedTime + " milliseconds.");
+
+        // check for convergence by comparing the initial seed points with the updated centroids
+        boolean hasConverged = ConvergenceChecker.checkConvergence(
+                seedsPath,
+                outputPath + "/part-r-00000",
+                0.5
+        );
+
+        if (hasConverged){
+            System.out.println("Have reached convergence!");
+        } else {
+            System.out.println("Have not reached convergence yet!");
+        }
         System.exit(success ? 0 : 1);
     }
 }
