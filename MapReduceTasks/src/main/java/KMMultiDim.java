@@ -273,7 +273,7 @@ public class KMMultiDim {
         // defaults
         boolean stopIfConverged = false; // stop early if converged, but does not continue beyond R rounds if not
         boolean outputFinalPoints = false; // output what the final points are along with their centroids
-        int R = 20; // number of rounds to run
+        int R = 7; // number of rounds to run
         double threshold = 0.01; // convergence threshold
         boolean optimize = false; //optimize with combiner
         boolean indicateConvergence = false;
@@ -309,9 +309,9 @@ public class KMMultiDim {
         conf.set("mapreduce.output.textoutputformat.separator", ",");
         FileSystem fs = FileSystem.get(conf);
 
-        String inputPath = "/user/cs4433/project2/input/mock_dataset.csv";
-        String seedsPath = "/user/cs4433/project2/input/mock_initcentroids.csv";
-        String outputPathBase = "/user/cs4433/project2/output";
+        String inputPath = "/user/cs4433/project2/input/Task3BYOD_cab_normMM_10.csv";
+        String seedsPath = "/user/cs4433/project2/input/Task3BYOD_centroids.csv";
+        String outputPathBase = "/user/cs4433/project2/cab_output";
         // if (fs.exists(new Path(outputPathBase))) {
            // fs.delete(new Path(outputPathBase), true);
         // }
